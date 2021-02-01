@@ -49,7 +49,7 @@ steps:
       DJANGO_DEBUG: DEBUG
     commands:
       - *load-dep-cache
-      - pytest --cov-report=xml:./coverage.xml --cov=./src --cov-config=./pyproject.toml ./tests
+      - pytest --cov-report=xml:./coverage.xml --cov=./business_rules --cov-config=./pyproject.toml ./tests
     depends_on:
       - install_dependencies
 
