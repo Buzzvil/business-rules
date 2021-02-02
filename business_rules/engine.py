@@ -143,4 +143,4 @@ async def async_do_actions(actions, defined_actions):
             )
         await method(**params)
 
-    await asyncio.gather(*[do_action(act) for act in actions])
+    await asyncio.gather(*map(do_action, actions))
