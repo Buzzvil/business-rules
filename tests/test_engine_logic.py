@@ -1,3 +1,4 @@
+import asyncio
 from unittest import TestCase
 
 from mock import MagicMock, patch
@@ -39,6 +40,34 @@ class EngineTests(TestCase):
         result = engine.run_all([rule2, rule1], variables, actions)
         self.assertTrue(result)
         self.assertEqual(engine.run.call_count, 2)
+
+    @patch.object(engine, 'async_run')
+    def test_async_run_all_some_rule_triggered(self, *args):
+        """By default, does not stop on first triggered rule. Returns True if
+        any rule was triggered, otherwise False
+        """
+        rule1 = {'conditions': 'condition1', 'actions': 'action name 1'}
+        rule2 = {'conditions': 'condition2', 'actions': 'action name 2'}
+        variables = BaseVariables()
+        actions = BaseActions()
+
+        async def return_action1(rule, *args, **kwargs):
+            return rule['actions'] == 'action name 1'
+
+        engine.async_run.side_effect = return_action1
+
+        loop = asyncio.get_event_loop()
+        result = loop.run_until_complete(engine.async_run_all([rule1, rule2], variables, actions))
+        self.assertTrue(result)
+        self.assertEqual(engine.async_run.call_count, 2)
+
+        # switch order and try again
+        engine.async_run.reset_mock()
+
+        result = loop.run_until_complete(engine.async_run_all([rule2, rule1], variables, actions))
+        self.assertTrue(result)
+        self.assertEqual(engine.async_run.call_count, 2)
+        loop.close()
 
     @patch.object(engine, 'run', return_value=True)
     def test_run_all_stop_on_first(self, *args):

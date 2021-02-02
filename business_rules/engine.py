@@ -15,11 +15,32 @@ def run_all(rule_list, defined_variables, defined_actions, stop_on_first_trigger
     return rule_was_triggered
 
 
+async def async_run_all(rule_list, defined_variables, defined_actions, stop_on_first_trigger=False):
+
+    rule_was_triggered = False
+    for rule in rule_list:
+        result = await async_run(rule, defined_variables, defined_actions)
+        if result:
+            rule_was_triggered = True
+            if stop_on_first_trigger:
+                return True
+    return rule_was_triggered
+
+
 def run(rule, defined_variables, defined_actions):
     conditions, actions = rule['conditions'], rule['actions']
     rule_triggered = check_conditions_recursively(conditions, defined_variables)
     if rule_triggered:
         do_actions(actions, defined_actions)
+        return True
+    return False
+
+
+async def async_run(rule, defined_variables, defined_actions):
+    conditions, actions = rule['conditions'], rule['actions']
+    rule_triggered = check_conditions_recursively(conditions, defined_variables)
+    if rule_triggered:
+        await async_do_actions(actions, defined_actions)
         return True
     return False
 
@@ -107,3 +128,17 @@ def do_actions(actions, defined_actions):
         params = action.get('params') or {}
         method = getattr(defined_actions, method_name, fallback)
         method(**params)
+
+
+async def async_do_actions(actions, defined_actions):
+    for action in actions:
+        method_name = action['name']
+
+        def fallback(*args, **kwargs):
+            raise AssertionError(
+                "Action {0} is not defined in class {1}".format(method_name, defined_actions.__class__.__name__)
+            )
+
+        params = action.get('params') or {}
+        method = getattr(defined_actions, method_name, fallback)
+        await method(**params)
