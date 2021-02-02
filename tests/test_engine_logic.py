@@ -1,7 +1,7 @@
 import asyncio
 from unittest import TestCase
 
-from mock import MagicMock, patch, AsyncMock
+from mock import MagicMock, patch, AsyncMock, call
 
 from business_rules import engine
 from business_rules.actions import BaseActions
@@ -93,6 +93,20 @@ class EngineTests(TestCase):
         self.assertEqual(result, True)
         self.assertEqual(engine.async_run.call_count, 1)
         engine.async_run.assert_called_once_with(rule1, variables, actions)
+
+    @patch.object(engine, 'async_run', return_value=False)
+    def test_async_run_all_return_false_for_no_execution(self, *args):
+        rule1 = {'conditions': 'condition1', 'actions': 'action name 1'}
+        rule2 = {'conditions': 'condition2', 'actions': 'action name 2'}
+        variables = BaseVariables()
+        actions = BaseActions()
+
+        result = asyncio.get_event_loop().run_until_complete(
+            engine.async_run_all([rule1, rule2], variables, actions, stop_on_first_trigger=True)
+        )
+        self.assertEqual(result, False)
+        self.assertEqual(engine.async_run.call_count, 2)
+        engine.async_run.assert_has_calls([call(rule1, variables, actions), call(rule2, variables, actions)])
 
     @patch.object(engine, 'check_conditions_recursively', return_value=True)
     @patch.object(engine, 'do_actions')
@@ -249,6 +263,14 @@ class EngineTests(TestCase):
 
         defined_actions.action1.assert_called_once_with()
         defined_actions.action2.assert_called_once_with(param1='foo', param2=10)
+
+    def test_async_do_actions_raise_execption(self):
+        actions = [{'name': 'action1'}, {'name': 'action2', 'params': {'param1': 'foo', 'param2': 10}}]
+        defined_actions = BaseActions()
+        defined_actions.action1 = AsyncMock()
+
+        with self.assertRaises(AssertionError):
+            asyncio.get_event_loop().run_until_complete(engine.async_do_actions(actions, defined_actions))
 
     def test_do_with_invalid_action(self):
         actions = [{'name': 'fakeone'}]
