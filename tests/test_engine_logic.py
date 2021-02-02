@@ -1,7 +1,7 @@
 import asyncio
 from unittest import TestCase
 
-from mock import MagicMock, patch
+from mock import MagicMock, patch, AsyncMock
 
 from business_rules import engine
 from business_rules.actions import BaseActions
@@ -106,6 +106,18 @@ class EngineTests(TestCase):
         engine.check_conditions_recursively.assert_called_once_with(rule['conditions'], variables)
         engine.do_actions.assert_called_once_with(rule['actions'], actions)
 
+    @patch.object(engine, 'check_conditions_recursively', return_value=True)
+    @patch.object(engine, 'async_do_actions')
+    def test_async_run_that_triggers_rule(self, *args):
+        rule = {'conditions': 'blah', 'actions': 'blah2'}
+        variables = BaseVariables()
+        actions = BaseActions()
+
+        result = asyncio.get_event_loop().run_until_complete(engine.async_run(rule, variables, actions))
+        self.assertEqual(result, True)
+        engine.check_conditions_recursively.assert_called_once_with(rule['conditions'], variables)
+        engine.async_do_actions.assert_called_once_with(rule['actions'], actions)
+
     @patch.object(engine, 'check_conditions_recursively', return_value=False)
     @patch.object(engine, 'do_actions')
     def test_run_that_doesnt_trigger_rule(self, *args):
@@ -117,6 +129,18 @@ class EngineTests(TestCase):
         self.assertEqual(result, False)
         engine.check_conditions_recursively.assert_called_once_with(rule['conditions'], variables)
         self.assertEqual(engine.do_actions.call_count, 0)
+
+    @patch.object(engine, 'check_conditions_recursively', return_value=False)
+    @patch.object(engine, 'async_do_actions')
+    def test_async_run_that_doesnt_trigger_rule(self, *args):
+        rule = {'conditions': 'blah', 'actions': 'blah2'}
+        variables = BaseVariables()
+        actions = BaseActions()
+
+        result = asyncio.get_event_loop().run_until_complete(engine.async_run(rule, variables, actions))
+        self.assertEqual(result, False)
+        engine.check_conditions_recursively.assert_called_once_with(rule['conditions'], variables)
+        self.assertEqual(engine.async_do_actions.call_count, 0)
 
     @patch.object(engine, 'check_condition', return_value=True)
     def test_check_all_conditions_with_all_true(self, *args):
@@ -211,6 +235,17 @@ class EngineTests(TestCase):
         defined_actions.action2 = MagicMock()
 
         engine.do_actions(actions, defined_actions)
+
+        defined_actions.action1.assert_called_once_with()
+        defined_actions.action2.assert_called_once_with(param1='foo', param2=10)
+
+    def test_async_do_actions(self):
+        actions = [{'name': 'action1'}, {'name': 'action2', 'params': {'param1': 'foo', 'param2': 10}}]
+        defined_actions = BaseActions()
+        defined_actions.action1 = AsyncMock()
+        defined_actions.action2 = AsyncMock()
+
+        asyncio.get_event_loop().run_until_complete(engine.async_do_actions(actions, defined_actions))
 
         defined_actions.action1.assert_called_once_with()
         defined_actions.action2.assert_called_once_with(param1='foo', param2=10)
