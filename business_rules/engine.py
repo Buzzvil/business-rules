@@ -18,15 +18,16 @@ def run_all(rule_list, defined_variables, defined_actions, stop_on_first_trigger
 
 
 async def async_run_all(rule_list, defined_variables, defined_actions, stop_on_first_trigger=False):
-
-    rule_was_triggered = False
-    for rule in rule_list:
-        result = await async_run(rule, defined_variables, defined_actions)
-        if result:
-            rule_was_triggered = True
-            if stop_on_first_trigger:
+    if stop_on_first_trigger:
+        for rule in rule_list:
+            result = await async_run(rule, defined_variables, defined_actions)
+            if result:
                 return True
-    return rule_was_triggered
+        return False
+    else:
+        _async_run = partial(async_run, defined_variables=defined_variables, defined_actions=defined_actions)
+        results = asyncio.gather(*map(_async_run, rule_list))
+        return any(results)
 
 
 def run(rule, defined_variables, defined_actions):
