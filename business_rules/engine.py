@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+from functools import partial
+
 from .fields import FIELD_NO_INPUT
 
 
@@ -15,11 +18,32 @@ def run_all(rule_list, defined_variables, defined_actions, stop_on_first_trigger
     return rule_was_triggered
 
 
+async def async_run_all(rule_list, defined_variables, defined_actions, stop_on_first_trigger=False):
+    if stop_on_first_trigger:
+        for rule in rule_list:
+            if await async_run(rule, defined_variables, defined_actions):
+                return True
+        return False
+    else:
+        _async_run = partial(async_run, defined_variables=defined_variables, defined_actions=defined_actions)
+        results = asyncio.gather(*map(_async_run, rule_list))
+        return any(results)
+
+
 def run(rule, defined_variables, defined_actions):
     conditions, actions = rule['conditions'], rule['actions']
     rule_triggered = check_conditions_recursively(conditions, defined_variables)
     if rule_triggered:
         do_actions(actions, defined_actions)
+        return True
+    return False
+
+
+async def async_run(rule, defined_variables, defined_actions):
+    conditions, actions = rule['conditions'], rule['actions']
+    rule_triggered = check_conditions_recursively(conditions, defined_variables)
+    if rule_triggered:
+        await async_do_actions(actions, defined_actions)
         return True
     return False
 
@@ -107,3 +131,17 @@ def do_actions(actions, defined_actions):
         params = action.get('params') or {}
         method = getattr(defined_actions, method_name, fallback)
         method(**params)
+
+
+async def async_do_actions(actions, defined_actions):
+    async def do_action(action):
+        method_name = action['name']
+        params = action.get('params') or {}
+        method = getattr(defined_actions, method_name, None)
+        if not method:
+            raise AssertionError(
+                "Action {0} is not defined in class {1}".format(method_name, defined_actions.__class__.__name__)
+            )
+        await method(**params)
+
+    await asyncio.gather(*map(do_action, actions))

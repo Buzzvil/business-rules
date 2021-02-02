@@ -95,7 +95,7 @@ marshmallow==3.10.0
     #   nitpick
 mccabe==0.6.1
     # via flake8
-mock==1.0.1
+mock==4.0.3
     # via -r requirements-dev.in
 more-itertools==8.6.0
     # via nitpick
