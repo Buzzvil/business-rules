@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from .fields import FIELD_NO_INPUT
 
 
@@ -131,14 +133,14 @@ def do_actions(actions, defined_actions):
 
 
 async def async_do_actions(actions, defined_actions):
-    for action in actions:
+    async def do_action(action):
         method_name = action['name']
-
-        async def fallback(*args, **kwargs):
+        params = action.get('params') or {}
+        method = getattr(defined_actions, method_name, None)
+        if not method:
             raise AssertionError(
                 "Action {0} is not defined in class {1}".format(method_name, defined_actions.__class__.__name__)
             )
-
-        params = action.get('params') or {}
-        method = getattr(defined_actions, method_name, fallback)
         await method(**params)
+
+    await asyncio.gather(*[do_action(act) for act in actions])
