@@ -81,6 +81,20 @@ class EngineTests(TestCase):
         self.assertEqual(engine.run.call_count, 1)
         engine.run.assert_called_once_with(rule1, variables, actions)
 
+    @patch.object(engine, 'async_run', return_value=True)
+    def test_async_run_all_stop_on_first(self, *args):
+        rule1 = {'conditions': 'condition1', 'actions': 'action name 1'}
+        rule2 = {'conditions': 'condition2', 'actions': 'action name 2'}
+        variables = BaseVariables()
+        actions = BaseActions()
+
+        result = asyncio.get_event_loop().run_until_complete(
+            engine.async_run_all([rule1, rule2], variables, actions, stop_on_first_trigger=True)
+        )
+        self.assertEqual(result, True)
+        self.assertEqual(engine.async_run.call_count, 1)
+        engine.async_run.assert_called_once_with(rule1, variables, actions)
+
     @patch.object(engine, 'check_conditions_recursively', return_value=True)
     @patch.object(engine, 'do_actions')
     def test_run_that_triggers_rule(self, *args):

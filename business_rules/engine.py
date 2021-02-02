@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from functools import partial
 
 from .fields import FIELD_NO_INPUT
 
@@ -20,8 +21,7 @@ def run_all(rule_list, defined_variables, defined_actions, stop_on_first_trigger
 async def async_run_all(rule_list, defined_variables, defined_actions, stop_on_first_trigger=False):
     if stop_on_first_trigger:
         for rule in rule_list:
-            result = await async_run(rule, defined_variables, defined_actions)
-            if result:
+            if await async_run(rule, defined_variables, defined_actions):
                 return True
         return False
     else:
