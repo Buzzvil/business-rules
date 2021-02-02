@@ -138,14 +138,14 @@ steps:
   - name: pypi_publish
     image: plugins/pypi
     settings:
-      username: $USERNAME
-      password: $PASSWORD
+      username:
+        from_secret: pypi_username
+      password:
+        from_secret: pypi_password
       repository: http://pypi.buzzvil-internal.com
       distributions:
         - bdist_wheel
 
 trigger:
-  branch:
-    - master
   event:
     - tag
