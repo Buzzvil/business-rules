@@ -134,7 +134,7 @@ async def async_do_actions(actions, defined_actions):
     for action in actions:
         method_name = action['name']
 
-        def fallback(*args, **kwargs):
+        async def fallback(*args, **kwargs):
             raise AssertionError(
                 "Action {0} is not defined in class {1}".format(method_name, defined_actions.__class__.__name__)
             )
