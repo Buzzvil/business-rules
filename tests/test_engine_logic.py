@@ -67,7 +67,6 @@ class EngineTests(TestCase):
         result = loop.run_until_complete(engine.async_run_all([rule2, rule1], variables, actions))
         self.assertTrue(result)
         self.assertEqual(engine.async_run.call_count, 2)
-        loop.close()
 
     @patch.object(engine, 'run', return_value=True)
     def test_run_all_stop_on_first(self, *args):
